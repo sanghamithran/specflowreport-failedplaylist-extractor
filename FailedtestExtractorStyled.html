@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Playlist Generator</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js"
+        integrity="sha256-u7e5khyithlIdTpu22PHhENmPcRdFiHRjhAuHcs05RI=" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <div id="dragArea">
+        <h1 class="header">Upload Your Test Report</h1>
+        <div class="drag-area">
+            <div class="icon"><i class="fas fa-cloud-upload-alt"></i></div>
+            <header>Drag & Drop to Upload File</header>
+            <span>OR</span>
+            <button>Browse File</button>
+            <input type="file" accept="text/html" hidden>
+        </div>
+    </div>
+    <div id="downloadArea">
+        <h1 class="header">Test Playlist Is Ready!</h1>
+        <div class="drag-area download-area">
+            <div class="icon"><i class="fas fa-cloud-download-alt"></i></div>
+            <header>Download Playlist</header>
+            <span></span>
+            <button id="download" onclick="downloadPlaylist();">Download</button>
+            <span>OR</span>
+            <button id='new' onclick="uploadNew();">Generate New</button>
+        </div>
+    </div>
+    <iframe id="my_iframe" style="display:none;"></iframe>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        #dragArea,
+        #downloadArea {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .header {
+            font-family: "Poppins", sans-serif;
+            font-weight: 700;
+            font-size: 80px;
+            color: white;
+            transform: translateY(-70%);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #5256ad;
+        }
+
+        .drag-area,
+        .download-area {
+            border: 2px dashed #fff;
+            height: 500px;
+            width: 700px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .download-area {
+            border: 2px solid #fff;
+        }
+
+        .download-area button {
+            margin: 1%;
+        }
+
+        .drag-area.active {
+            border: 2px solid #fff;
+        }
+
+        .drag-area .icon {
+            font-size: 100px;
+            color: #fff;
+        }
+
+        .drag-area header {
+            font-size: 30px;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .drag-area span {
+            font-size: 25px;
+            font-weight: 500;
+            color: #fff;
+            margin: 10px 0 15px 0;
+        }
+
+        .drag-area button {
+            padding: 10px 25px;
+            font-size: 20px;
+            font-weight: 500;
+            border: none;
+            outline: none;
+            background: #fff;
+            color: #5256ad;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .drag-area img {
+            height: 100%;
+            width: 100%;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        #downloadArea {
+            display: none;
+        }
+    </style>
+    <script>
+        //selecting all required elements
+        const dropArea = document.querySelector(".drag-area"),
+            dragText = dropArea.querySelector("header"),
+            button = dropArea.querySelector("button"),
+            input = dropArea.querySelector("input");
+        let file; //this is a global variable and we'll use it inside multiple functions
+
+        button.onclick = () => {
+            input.click(); //if user click on the button then the input also clicked
+        }
+
+        input.addEventListener("change", function () {
+            //getting user select file and [0] this means if user select multiple files then we'll select only the first one
+            file = this.files[0];
+            dropArea.classList.add("active");
+            showFile(); //calling function
+        });
+
+
+        //If user Drag File Over DropArea
+        dropArea.addEventListener("dragover", (event) => {
+            event.preventDefault(); //preventing from default behaviour
+            dropArea.classList.add("active");
+            dragText.textContent = "Release to Upload File";
+        });
+
+        //If user leave dragged File from DropArea
+        dropArea.addEventListener("dragleave", () => {
+            dropArea.classList.remove("active");
+            dragText.textContent = "Drag & Drop to Upload File";
+        });
+
+        //If user drop File on DropArea
+        dropArea.addEventListener("drop", (event) => {
+            event.preventDefault(); //preventing from default behaviour
+            //getting user select file and [0] this means if user select multiple files then we'll select only the first one
+            file = event.dataTransfer.files[0];
+            showFile(); //calling function
+        });
+
+        let dom_nodes;
+        let failedScenarios = [];
+        let playlistContent;
+        function showFile() {
+            let fileType = file.type; //getting selected file type
+            let validExtensions = ["text/html"]; //adding some valid image extensions in array
+            if (validExtensions.includes(fileType)) { //if user selected file is an image file
+                console.log("test")
+                let reader = new FileReader(); //creating new FileReader object
+                reader.onload = () => {
+                    let text = reader.result; //passing user file source in fileURL variable
+                    dom_nodes = $($.parseHTML(text));
+                    $("#my_iframe").append(dom_nodes);
+                    $("a[name=error_summary] > table > tbody > tr").addClass("tableRow");
+                    $("a[name=error_summary] > table > tbody .colorFailed")
+                        .parents(".tableRow")
+                        .each(function (index) {
+                            $(this).find("td > a").text();
+                            failedScenarios.push($(this).find("td > a").text());
+                        });
+                    failedScenarios = updateFailedScenariosArray(failedScenarios);
+                    $('#my_iframe').remove()
+                    $('#dragArea').remove();
+                    $('#downloadArea').css('display', 'flex');
+                }
+                reader.readAsText(input.files[0]);
+            } else {
+                alert("This is not an HTML File!");
+                dropArea.classList.remove("active");
+                dragText.textContent = "Drag & Drop to Upload File";
+            }
+        }
+        function updateFailedScenariosArray(strArray) {
+            var newStrArray = [];
+            for (let i = 0; i < strArray.length; i++) {
+                var extractedText = strArray[i].split("(in ")[0];
+                newStrArray.push(processNormalScenario(extractedText))
+                if (extractedText.includes(", ")) {
+                    newStrArray.push(processTemplateScenario(extractedText))
+                }
+            }
+            return newStrArray;
+        }
+
+        function processNormalScenario(str) {
+            var newStr = str
+                .replace(/[-.]/g, "_ ")
+                .replace(/[^a-zA-Z0-9_']/g, " ")
+                .replace(/\d+[a-zA-Z]/, x => x[0] + x[1].toUpperCase());
+            return toTitleCase(newStr).replace(/[^a-zA-Z0-9_]/g, "");
+        }
+
+        function processTemplateScenario(str) {
+            var strArray = str.split(", ");
+            var trailingPart = "";
+            for (let i = 1; i < strArray.length; i++) {
+                //strArray[i] = strArray[i].replace(/\s/g, '')
+                strArray[i] = strArray[i].trim();
+                if (strArray[i].length > 36) {
+                    strArray[i] = `${strArray[i].substring(0, 37)}...`
+                }
+                trailingPart = trailingPart + `"${strArray[i]}",`;
+            }
+            trailingPart = processHTMLEntities(trailingPart);
+            return processNormalScenario(strArray[0]) + `(${trailingPart}null)`;
+        }
+
+        function processHTMLEntities(str) {
+            return str
+                .replaceAll("&", "&amp;")
+                .replaceAll("\"", "&quot;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&lt;")
+        }
+
+        function toTitleCase(str) {
+            return str.replace(/\w\S*/g, function (txt) {
+                return txt.charAt(0).toUpperCase() + txt.substr(1);
+            });
+        }
+        function uploadNew() {
+            location.reload();
+            failedScenarios = [];
+
+        }
+
+        function downloadPlaylist() {
+            download(file.name + '.playlist', createPlaylistContent(failedScenarios));
+        }
+
+        function createPlaylistContent(scenariosArray) {
+            let tempArray = [];
+            scenariosArray.forEach(element => tempArray.push(`<Property Name="DisplayName" Value="${element}" />\n`));
+            let value = tempArray.join("");
+            let content =
+                `<Playlist Version="2.0">
+                <Rule Match="Any">
+                    ${value}
+                </Rule>
+            </Playlist>`
+            return content.replace(/^\s+|\s+$/gm, '');
+        }
+
+        function download(filename, text) {
+            let element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+
+            element.style.display = 'none';
+            document.body.appendChild(element);
+
+            element.click();
+
+            document.body.removeChild(element);
+        }
+
+    </script>
+</body>
+
+</html>
